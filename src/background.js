@@ -1,21 +1,39 @@
 'use strict';
 
-// With background scripts you can communicate with popup
-// and contentScript files.
-// For more information on background script,
-// See https://developer.chrome.com/extensions/background_pages
+var database = {};
+var recentlyRemoved = {};
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'GREETINGS') {
-    const message = `Hi ${
-      sender.tab ? 'Con' : 'Pop'
-    }, my name is Bac. I am from Background. It's great to hear from you.`;
+  const payload = request.payload;
+  if (request.type === 'ADDED') {
+    if (recentlyRemoved[payload.id]) {
+      console.log('modified', payload.id);
+      // TODO - what changed? notify user
+      delete recentlyRemoved[payload.id];
+    } else {
+      console.log('added', payload.id);
+      // TODO - notify user
+    }
 
-    // Log message coming from the `request` parameter
-    console.log(request.payload.message);
-    // Send a response message
-    sendResponse({
-      message,
-    });
+    database[payload.id] = payload;
+
   }
+
+  if (request.type === 'REMOVED') {
+    var item = database[payload.id];
+    if (item) {
+      recentlyRemoved[item.id] = item;
+      delete database[payload.id];
+
+      setTimeout(() => {
+        if (recentlyRemoved[item.id]) {
+          console.log('deleted', item.id);
+          // TODO - notify user?
+
+          delete recentlyRemoved[item.id];
+        }
+      }, 500);
+    }
+  }
+  return true;
 });

@@ -1,43 +1,105 @@
 'use strict';
 
-// Content script file will run in the context of web page.
-// With content script you can manipulate the web pages using
-// Document Object Model (DOM).
-// You can also pass information to the parent extension.
+const BUG = 'Bug';
+const US = 'User Story';
+const COLUMN = 'Column';
+const SWIMLANE = 'Swimlane';
+const ADDED = 'ADDED';
+const REMOVED = 'REMOVED';
 
-// We execute this script by making an entry in manifest.json file
-// under `content_scripts` property
+function initaiteObserver() {
+  let observer = new MutationObserver(mutations => {
+    for (let mutation of mutations) {
+      if (mutation.type === 'childList') {
+        var addedNode = mutation.addedNodes?.length != 0 ? mutation.addedNodes[0] : null;
+        var removedNode = mutation.removedNodes?.length != 0 ? mutation.removedNodes[0] : null;
 
-// For more information on Content Scripts,
-// See https://developer.chrome.com/extensions/content_scripts
+        if (addedNode != null) {
+          if (addedNode?.id?.startsWith('vss') && addedNode?.role == 'group') {
+            processNode(addedNode, ADDED);
+          }
+        }
 
-// Log `title` of current active web page
-const pageTitle = document.head.getElementsByTagName('title')[0].innerHTML;
-console.log(
-  `Page title is: '${pageTitle}' - evaluated by Chrome extension's 'contentScript.js' file`
-);
+        if (removedNode != null) {
+          if (removedNode?.id?.startsWith('vss') && removedNode?.role == 'group') {
 
-// Communicate with background file by sending a message
-chrome.runtime.sendMessage(
-  {
-    type: 'GREETINGS',
-    payload: {
-      message: 'Hello, my name is Con. I am from ContentScript.',
+            processNode(removedNode, REMOVED);
+          }
+        }
+      }
+    }
+  }
+  );
+
+  observer.observe(document, { childList: true, subtree: true });
+
+}
+
+
+function processNode(node, type) {
+  var fullTitle = node.getAttribute('aria-label');
+
+  var itemType;
+  if (fullTitle.startsWith(BUG)) {
+    itemType = BUG;
+    fullTitle = fullTitle.substring(4);
+
+  } else if (fullTitle.startsWith(US)) {
+    itemType = US;
+    fullTitle = fullTitle.substring(11);
+  } else {
+    return;
+  }
+
+  var columnIndex = fullTitle.lastIndexOf(COLUMN);
+  var title = fullTitle.substring(0, columnIndex - 2);
+  fullTitle = fullTitle.substring(title.length + 2);
+
+  var swimlaneIndex = fullTitle.lastIndexOf(SWIMLANE);
+  var column;
+  var swimlane;
+  if (swimlaneIndex != -1) {
+    column = fullTitle.substring(7, swimlaneIndex - 3).trim();
+    swimlane = fullTitle.substring(swimlaneIndex + 9).trim();
+  } else {
+    column = fullTitle.substring(6).trim();
+  }
+
+  var assignedPerson = node.querySelector('span.identity-picker-resolved-name')?.textContent;
+  var id = node.querySelector(`div[class="id"]`)?.textContent;
+
+
+  var workItem = {
+    id: id,
+    type: itemType,
+    title: title,
+    swimlane: swimlane,
+    column: column,
+    assignedPerson: assignedPerson
+  }
+
+  chrome.runtime.sendMessage(
+    {
+      type: type,
+      payload: workItem,
     },
-  },
-  (response) => {
-    console.log(response.message);
-  }
-);
+    (_) => { }
+  );
+}
 
-// Listen for message
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'COUNT') {
-    console.log(`Current count is ${request.payload.count}`);
+function initateDatabase() {
+  var nodes = document.querySelectorAll(`div[id^="vss"][role="group"].board-tile`);
+  for (let index = 0; index < nodes.length; index++) {
+    const node = nodes[index];
+    processNode(node, ADDED);
   }
+}
 
-  // Send an empty response
-  // See https://github.com/mozilla/webextension-polyfill/issues/130#issuecomment-531531890
-  sendResponse({});
-  return true;
-});
+
+setTimeout(() => {
+
+  initateDatabase();
+  initaiteObserver();
+
+}, 2000);
+
