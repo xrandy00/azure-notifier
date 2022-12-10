@@ -1,39 +1,110 @@
 'use strict';
 
+const consts = require('./consts.js');
+
 var database = {};
 var recentlyRemoved = {};
+var lastRequest = {};
+
+
+function processChange(before, after) {
+  if (before.title != after.title) {
+    return {
+      type: consts.CHANGED_TITLE,
+      payload: {
+        id: before.id,
+        type: before.type,
+        old: before.title,
+        new: after.title,
+      },
+    };
+  }
+
+  if (before.swimlane != after.swimlane) {
+    return {
+      type: consts.CHANGED_ASSIGNED,
+      payload: {
+        id: before.id,
+        type: before.type,
+        old: before.swimlane,
+        new: after.swimlane,
+      },
+    };
+  }
+
+  if (before.column != after.column) {
+    return {
+      type: consts.CHANGED_COLUMN,
+      payload: {
+        id: before.id,
+        type: before.type,
+        old: before.column,
+        new: after.column,
+        person: after.assignedPerson,
+      },
+    };
+  }
+
+  if (before.assignedPerson != after.assignedPerson) {
+    return {
+      type: consts.CHANGED_SWIMLANE,
+      payload: {
+        id: before.id,
+        type: before.type,
+        old: before.assignedPerson,
+        new: after.assignedPerson,
+      },
+    };
+  }
+}
+
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // process each change just once 
+  var requestString = JSON.stringify(request);
+  if (lastRequest[request.type] == requestString) return true;
+  lastRequest[request.type] = requestString;
+
   const payload = request.payload;
-  if (request.type === 'ADDED') {
+  var response;
+
+  if (request.type === consts.ADDED) {
+    if (database[payload.id]) {
+      return true;
+      // already added, so change message will follow, ignore
+    }
+
     if (recentlyRemoved[payload.id]) {
-      console.log('modified', payload.id);
-      // TODO - what changed? notify user
       delete recentlyRemoved[payload.id];
     } else {
       console.log('added', payload.id);
-      // TODO - notify user
     }
 
     database[payload.id] = payload;
 
-  }
-
-  if (request.type === 'REMOVED') {
+  } else if (request.type === consts.REMOVED) {
     var item = database[payload.id];
     if (item) {
-      recentlyRemoved[item.id] = item;
+      recentlyRemoved[item.id] = payload; // this works - stores old state of item
       delete database[payload.id];
 
       setTimeout(() => {
         if (recentlyRemoved[item.id]) {
           console.log('deleted', item.id);
-          // TODO - notify user?
 
           delete recentlyRemoved[item.id];
         }
-      }, 500);
+      }, 1000);
     }
+  } else if (request.type === consts.CHANGED) {
+    var currentData = database[payload.id];
+    if (!currentData) return true;
+
+    response = processChange(currentData, payload);
   }
-  return true;
+
+  sendResponse({
+    response,
+  });
 });
+

@@ -19,15 +19,41 @@
   "permissions": [
     "storage"
   ],
+
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "alert_1.wav",
+        "alert_2.wav",
+        "alert_3.wav",
+        "alert_4.wav",
+        "alert_5.wav",
+        "cheer_1.mp3",
+        "cheer_2.wav",
+        "cheer_3.wav",
+        "cheer_4.wav",
+        "cheer_5.wav",
+        "cheer_6.wav",
+        "cheer_7.wav",
+        "cheer_8.wav",
+        "cheer_9.wav"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
   "content_scripts": [
     {
       "matches": [
-        "<all_urls>"
+        "*://dev.azure.com/*"
       ],
       "run_at": "document_idle",
       "js": [
         "contentScript.js"
-      ]
+      ],
+      "css": ["balloons.css"]
+
     }
   ]
 }
