@@ -108,3 +108,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   });
 });
 
+
+// reload content script when URL changes
+chrome.tabs.onUpdated.addListener(
+  function (tabId, changeInfo, tab) {
+    console.log(tabId, changeInfo);
+    // read changeInfo data and do something with it
+    // like send the new url to contentscripts.js
+    if (changeInfo.url) {
+      chrome.tabs.sendMessage(tabId, {
+        type: 'urlChanged',
+        url: changeInfo.url
+      })
+    }
+  }
+);
+

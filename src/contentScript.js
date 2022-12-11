@@ -2,9 +2,13 @@
 
 const consts = require('./consts.js');
 
+var loadInProgress = false;
+var shrinkSizeForOneItem = null;
+
 
 function initaiteObserver() {
   const board = document.querySelector('div#boardContainer');
+  if (!board) return;
 
   const observer = new MutationObserver(mutations => {
     for (let mutation of mutations) {
@@ -55,6 +59,7 @@ function initaiteObserver() {
 
 function processNode(node, type) {
   var fullTitle = node.getAttribute('aria-label');
+  if (!fullTitle) return;
 
   var itemType;
   if (fullTitle?.startsWith(consts.BUG)) {
@@ -142,27 +147,50 @@ function initateDatabase() {
 async function playCheer() {
   var song = pickCheerSong();
   var audio = new Audio(chrome.runtime.getURL(song));
-  audio.volume = await fetchVolume() / 100;
+  var volume = await fetchCheerVolume();
+  if (volume == 0) return;
+  audio.volume = volume / 100;
   audio.play();
 }
 
 async function playAlert() {
   var song = pickAlert();
   var audio = new Audio(chrome.runtime.getURL(song));
-  var volume = (await fetchVolume());
-  if (volume > 0) {
-    volume = volume / 2; // alerts are louder then cheer, keep it at half
-  }
+  var volume = (await fetchAlertVolume());
+  if (volume == 0) return;
   audio.volume = volume / 100;
-  console.log(volume);
   audio.play();
 }
 
-function fetchVolume() {
+function fetchCheerVolume() {
   try {
-    return readLocalStorage("volume") ?? 30;
+    return readLocalStorage("cheerVolume") ?? 30;
   } catch {
     return 30;
+  }
+}
+
+function fetchAlertVolume() {
+  try {
+    return readLocalStorage("alertVolume") ?? 30;
+  } catch {
+    return 30;
+  }
+}
+
+function fetchBalloonsEnabled() {
+  try {
+    return readLocalStorage("balloons") ?? true;
+  } catch {
+    return true;
+  }
+}
+
+function fetchCollapsiblesEnabled() {
+  try {
+    return readLocalStorage("collapsibles") ?? true;
+  } catch {
+    return true;
   }
 }
 
@@ -178,22 +206,18 @@ const readLocalStorage = async (key) => {
   });
 };
 
-
-
-function notifyGenericItemClosed(id, title, person) {
+async function notifyGenericItemClosed(id, title, person) {
   playCheer();
-  createBalloons(45);
-  setTimeout(() => { removeBalloons() }, 5000);
 
-  // if (person) {
-  //   alert(`${person} closed item! ${id}: ${title}`);
-  // } else {
-  //   alert(`Item closed! ${id}: ${title}`);
-  // }
+  var balloonsEnabled = await fetchBalloonsEnabled();
+  if (balloonsEnabled) {
+    createBalloons(45);
+    setTimeout(() => { removeBalloons() }, 5000);
+  }
+
 }
 
 function notifyChange(id, type, property, from, to, song) {
-  console.log('notify change');
   if (song) {
     playAlert();
   }
@@ -226,64 +250,30 @@ function onIconClick(id, index) {
   icon.classList.toggle('bowtie-chevron-left');
   icon.classList.toggle('bowtie-chevron-right');
 
-  var header = document.querySelectorAll(`div.cell.inprogress`)[index];
 
   if (icon.classList.contains('bowtie-chevron-left')) {
-    // expand
-    header.style.width = null;
-    header.children[0].children[0].style.display = null;
-
-
-    var tables = document.querySelectorAll(`div.horizontal-table`);
-
-    for (let i = 0; i < tables.length; i++) {
-      const table = tables[i];
-      var tableWidth = table.clientWidth;
-
-      var sizeDifference = parseInt(table.getAttribute('widthDifferenceForOneItem'), 10);
-      var newWidth = tableWidth + sizeDifference;
-
-      table.style['width'] = `${newWidth}px`;
-    }
-
-    var swimlanes = document.querySelector(`div.cell.member-content.member.content.swimlanes`);
-    if (swimlanes) {
-      var children = swimlanes?.children ?? [];
-      for (var i = 0; i < children.length; i++) {
-        var swimlane = children[i];
-        var child = swimlane.querySelectorAll(`div.cell.member-content.member.content.inprogress`)[index];
-        child.style.width = null;
-        child.style.opacity = '1';
-      }
-    } else {
-      var swimlane = document.querySelector(`div.content-container.row.content`);
-      var child = swimlane.querySelectorAll(`div.cell.member-content.member.content.inprogress`)[index];
-      child.style.width = null;
-      child.style.opacity = '1';
-    }
-
+    enforceExpanded(index);
   } else {
-    // collapse
-    header.style.width = '80px';
-    header.children[0].children[0].style.display = "none";
+    enforceCollapsed(index);
+  }
+}
 
-    var swimlanes = document.querySelector(`div.cell.member-content.member.content.swimlanes`);
-    var maxWidthBefore = 0;
+function enforceCollapsed(index) {
+  console.log(index);
 
-    if (swimlanes) {
-      var children = swimlanes?.children ?? [];
-      for (var i = 0; i < children.length; i++) {
-        var swimlane = children[i];
-        var child = swimlane.querySelectorAll(`div.cell.member-content.member.content.inprogress`)[index];
-        var currentWidth = child.clientWidth;
-        maxWidthBefore = Math.max(currentWidth, maxWidthBefore);
+  var header = document.querySelectorAll(`div.cell.inprogress`)[index];
 
-        child.style.width = '80px';
-        child.style.overflow = 'hidden';
-        child.style.opacity = '0.25';
-      }
-    } else {
-      var swimlane = document.querySelector(`div.content-container.row.content`);
+  // collapse
+  header.style.width = '80px';
+  header.children[0].children[0].style.display = "none";
+
+  var swimlanes = document.querySelector(`div.cell.member-content.member.content.swimlanes`);
+  var maxWidthBefore = 0;
+
+  if (swimlanes) {
+    var children = swimlanes?.children ?? [];
+    for (var i = 0; i < children.length; i++) {
+      var swimlane = children[i];
       var child = swimlane.querySelectorAll(`div.cell.member-content.member.content.inprogress`)[index];
       var currentWidth = child.clientWidth;
       maxWidthBefore = Math.max(currentWidth, maxWidthBefore);
@@ -292,30 +282,84 @@ function onIconClick(id, index) {
       child.style.overflow = 'hidden';
       child.style.opacity = '0.25';
     }
+  } else {
+    var swimlane = document.querySelector(`div.content-container.row.content`);
+    var child = swimlane.querySelectorAll(`div.cell.member-content.member.content.inprogress`)[index];
+    var currentWidth = child.clientWidth;
+
+    maxWidthBefore = Math.max(currentWidth, maxWidthBefore);
+
+    child.style.width = '80px';
+    child.style.overflow = 'hidden';
+    child.style.opacity = '0.25';
+  }
 
 
-    if (!swimlanes) {
-      swimlanes = document.querySelector(`div.content-container.row.content`);
+  if (!swimlanes) {
+    swimlanes = document.querySelector(`div.content-container.row.content`);
+  }
+
+  var sizeDifference = maxWidthBefore - 80;
+  var tables = document.querySelectorAll(`div.horizontal-table`);
+
+  tables.forEach((table) => {
+    var tableWidth = table.clientWidth;
+
+    if (shrinkSizeForOneItem == null) {
+      shrinkSizeForOneItem = sizeDifference;
     }
 
-    var sizeDifference = maxWidthBefore - 80;
-    var tables = document.querySelectorAll(`div.horizontal-table`);
+    table.style.width = `${tableWidth - sizeDifference}px`;
+    table.style.display = null;
 
-    tables.forEach((table) => {
-      var tableWidth = table.clientWidth;
-
-      table.setAttribute('widthDifferenceForOneItem', sizeDifference);
-
-      table.style.width = `${tableWidth - sizeDifference}px`;
-      table.style.display = null;
-
-    });
-  }
+  });
 }
 
-function addCollapseButtons() {
-  var nodes = document.querySelector(`div.header-container.header`).querySelectorAll(`div.cell.inprogress`);
+function enforceExpanded(index) {
+  console.log(index);
+  var header = document.querySelectorAll(`div.cell.inprogress`)[index];
+
+  // expand
+  header.style.width = null;
+  header.children[0].children[0].style.display = null;
+
+  var tables = document.querySelectorAll(`div.horizontal-table`);
+
+  for (let i = 0; i < tables.length; i++) {
+    const table = tables[i];
+    var tableWidth = table.clientWidth;
+
+    var newWidth = tableWidth + shrinkSizeForOneItem;
+
+    table.style['width'] = `${newWidth}px`;
+  }
+
+  var swimlanes = document.querySelector(`div.cell.member-content.member.content.swimlanes`);
+  if (swimlanes) {
+    var children = swimlanes?.children ?? [];
+    for (var i = 0; i < children.length; i++) {
+      var swimlane = children[i];
+      var child = swimlane.querySelectorAll(`div.cell.member-content.member.content.inprogress`)[index];
+      child.style.width = null;
+      child.style.opacity = '1';
+    }
+  } else {
+    var swimlane = document.querySelector(`div.content-container.row.content`);
+    var child = swimlane.querySelectorAll(`div.cell.member-content.member.content.inprogress`)[index];
+    child.style.width = null;
+    child.style.opacity = '1';
+  }
+
+}
+
+async function addCollapseButtons() {
+  var collapsiblesEnabled = await fetchCollapsiblesEnabled();
+  if (!collapsiblesEnabled) return;
+
+  var nodes = document.querySelector(`div.header-container.header`)?.querySelectorAll(`div.cell.inprogress`);
   if (nodes && nodes.length > 0) {
+    var addedIcons = []; // array of arrays (triplets) [id, index, icon node]
+
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
 
@@ -330,10 +374,41 @@ function addCollapseButtons() {
 
       targetNode.insertAdjacentElement('beforebegin', collapseNode);
       var element = document.getElementById(`azure-notifier-column-collapse-icon-${i}`);
+
       element.addEventListener("click", () => {
         onIconClick(`azure-notifier-column-collapse-icon-${i}`, i);
       });
 
+      addedIcons.push([`azure-notifier-column-collapse-icon-${i}`, i]);
+    }
+
+    hijactClickEventsOnOriginalCollapseIcons();
+  }
+
+
+  function hijactClickEventsOnOriginalCollapseIcons() {
+    var icons = document.querySelectorAll(`i.bowtie-icon[role="button"]`);
+    if (icons && icons.length > 0) {
+      for (let i = 0; i < icons.length; i++) {
+        const icon = icons[i];
+        icon.addEventListener('click', function (event) {
+          console.log('icon click', event);
+          for (let i = 0; i < addedIcons.length; i++) {
+            const iconData = addedIcons[i];
+
+            var iconElement = document.getElementById(iconData[0]).querySelector("i");
+
+            console.log(iconElement.classList);
+            if (iconElement.classList.contains('bowtie-chevron-right')) {
+              enforceCollapsed(iconData[1]);
+            } else {
+              // for some reason it breaks when I uncomment this line
+              // enforceExpanded(iconData[1]);
+            }
+          }
+        });
+
+      }
     }
   }
 }
@@ -370,15 +445,32 @@ function getRandomInt(max) {
   return Math.floor(Math.random() * max);
 }
 
+function listenToUrlChange() {
+  chrome.runtime.onMessage.addListener(
+    function (request, sender, sendResponse) {
+      // listen for messages sent from background.js
+      if (request.type == 'urlChanged') {
+        if (loadInProgress) return true;
+        loadInProgress = true;
+        console.log('changing url');
+        setTimeout(() => {
+          addCollapseButtons();
+          loadInProgress = false;
+        }, 2000);
+      }
+
+      return true;
+    });
+}
+
+loadInProgress = true;
 setTimeout(() => {
   initateDatabase();
   initaiteObserver();
   addCollapseButtons();
-
+  listenToUrlChange();
+  loadInProgress = false;
 }, 2000);
-
-
-
 
 // balloons
 function random(num) {
@@ -414,16 +506,24 @@ function createBalloons(num) {
     balloon.style.cssText = getRandomStyles();
     balloonContainer.append(balloon);
   }
+
+  window.addEventListener("click", () => {
+    removeBalloons();
+  });
 }
 
 function removeBalloons() {
   const balloonContainer = document.getElementById("balloon-container");
+
+  if (!balloonContainer) return;
+
+  window.removeEventListener("click", () => {
+    removeBalloons();
+  });
   balloonContainer.style.opacity = 0;
   setTimeout(() => {
     balloonContainer.remove()
   }, 500)
 }
 
-window.addEventListener("click", () => {
-  removeBalloons();
-});
+

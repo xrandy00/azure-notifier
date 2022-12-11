@@ -8,14 +8,47 @@
 </head>
 
 <body>
-  <div class="app">
-    <div>
-      <input type="range" id="volume" name="volume" min="0" max="100">
-      <label for="volume">Volume</label>
+  <div class="tabs">
+    <div class="tab">
+      <input type="radio" name="css-tabs" id="tab-1" checked class="tab-switch">
+      <label for="tab-1" class="tab-label">Changelog</label>
+      <div class="tab-content">
+        <div id="changelog"></div>
+      </div>
     </div>
+    <div class="tab">
+      <input type="radio" name="css-tabs" id="tab-2" class="tab-switch">
+      <label for="tab-2" class="tab-label">Configuration</label>
+      <div class="tab-content">
+        <div class="selection">
+          <label for="alertVolume">Alert Volume</label>
+          <input type="range" id="alertVolume" name="alertVolume" min="0" max="100">
+        </div>
+        <div class="selection">
+          <label for="cheerVolume">Cheer Volume</label>
+          <input type="range" id="cheerVolume" name="cheerVolume" min="0" max="100">
+        </div>
+        <div class="selection">
+          <label for="balloons">Balloons</label>
+          <input type="checkbox" id="balloons" name="balloons" >
+        </div>
+        <div class="selection">
+          <label for="collapsibles">Collapsible columns</label>
+          <input type="checkbox" id="collapsibles" name="collapsibles">
+        </div>
 
+      </div>
+    </div>
+    <div class="tab">
+      <input type="radio" name="css-tabs" id="tab-3" class="tab-switch">
+      <label for="tab-3" class="tab-label">Setup</label>
+      <div class="tab-content">When I left Mr. Bates, I went down to my father: where, by the assistance of him and
+        my uncle John, and some other relations, I got forty pounds, and a promise of thirty pounds a year to
+        maintain me at Leyden: there I studied physic two years and seven months, knowing it would be useful in long
+        voyages.</div>
+    </div>
+  </div>
 
-    <div id="changelog"></div>
   </div>
 
   <script src="popup.js"></script>
