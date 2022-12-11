@@ -53,7 +53,7 @@ function loadChangelog() {
         if (item && item.data) {
             for (let i = 0; i < item.data.length; i++) {
                 var text = item.data[i];
-                appendTextToChangelog(`${i + 1} - ${text}`);
+                addTextToChangelog(`${i + 1} - ${text}`);
 
             }
         }
@@ -77,15 +77,13 @@ function changeCollapsible() {
 }
 
 
-function appendTextToChangelog(text) {
+function addTextToChangelog(text) {
     var changelog = document.getElementById('changelog');
     var node = document.createTextNode(text);
-
-    changelog.appendChild(node);
-
     const br = document.createElement("br");
-    changelog.appendChild(br);
 
+    changelog.insertBefore(br, changelog.firstChild);
+    changelog.insertBefore(node, changelog.firstChild);
 }
 
 init();
