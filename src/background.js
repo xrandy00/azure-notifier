@@ -9,31 +9,9 @@ var recentlyRemoved = {};
 var lastRequest = {};
 
 
+// TODO - support multiple changes at once
 function processChange(before, after) {
-  if (before.title != after.title) {
-    return {
-      type: consts.CHANGED_TITLE,
-      payload: {
-        id: before.id,
-        type: before.type,
-        old: before.title,
-        new: after.title,
-      },
-    };
-  }
-
-  if (before.swimlane != after.swimlane) {
-    return {
-      type: consts.CHANGED_ASSIGNED,
-      payload: {
-        id: before.id,
-        type: before.type,
-        old: before.swimlane,
-        new: after.swimlane,
-      },
-    };
-  }
-
+  // column has biggest prio currently
   if (before.column != after.column) {
     return {
       type: consts.CHANGED_COLUMN,
@@ -46,10 +24,29 @@ function processChange(before, after) {
       },
     };
   }
-
-  if (before.assignedPerson != after.assignedPerson) {
+  else if (before.title != after.title) {
+    return {
+      type: consts.CHANGED_TITLE,
+      payload: {
+        id: before.id,
+        type: before.type,
+        old: before.title,
+        new: after.title,
+      },
+    };
+  } else if (before.swimlane != after.swimlane) {
     return {
       type: consts.CHANGED_SWIMLANE,
+      payload: {
+        id: before.id,
+        type: before.type,
+        old: before.swimlane,
+        new: after.swimlane,
+      },
+    };
+  } else if (before.assignedPerson != after.assignedPerson) {
+    return {
+      type: consts.CHANGED_ASSIGNED,
       payload: {
         id: before.id,
         type: before.type,

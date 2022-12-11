@@ -156,7 +156,6 @@ async function playAlert() {
   var song = pickAlert();
   var audio = new Audio(chrome.runtime.getURL(song));
   var volume = (await fetchAlertVolume());
-  console.log(volume);
   if (volume == 0) return;
   audio.volume = volume / 100;
   audio.play();
@@ -195,7 +194,6 @@ async function fetchCollapsiblesEnabled() {
 }
 
 const readLocalStorage = async (key) => {
-  console.log('fetching');
   return new Promise((resolve, reject) => {
     chrome.storage.local.get([key], function (result) {
       if (result[key] === undefined) {
