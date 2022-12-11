@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Azure Notifier",
   "version": "0.1.0",
-  "description": "My Chrome Extension",
+  "description": "Extension listening and reacting to Azure DevOps changes while on Boards page. It adds notifications, changelog and collapsible icons to Board columns.",
   "icons": {
     "16": "icons/icon_16.png",
     "32": "icons/icon_32.png",
@@ -20,7 +20,6 @@
     "storage",
     "tabs"
   ],
-
   "web_accessible_resources": [
     {
       "resources": [
@@ -53,8 +52,9 @@
       "js": [
         "contentScript.js"
       ],
-      "css": ["balloons.css"]
-
+      "css": [
+        "balloons.css"
+      ]
     }
   ]
 }
