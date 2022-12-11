@@ -3,7 +3,9 @@
 const consts = require('./consts.js');
 
 var database = {};
+
 var recentlyRemoved = {};
+
 var lastRequest = {};
 
 
@@ -69,29 +71,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   var response;
 
   if (request.type === consts.ADDED) {
-    if (database[payload.id]) {
-      return true;
-      // already added, so change message will follow, ignore
-    }
-
     if (recentlyRemoved[payload.id]) {
       delete recentlyRemoved[payload.id];
-    } else {
-      console.log('added', payload.id);
     }
-
-    database[payload.id] = payload;
-
+    if (!database[payload.id]) {
+      database[payload.id] = payload;
+    }
   } else if (request.type === consts.REMOVED) {
     var item = database[payload.id];
     if (item) {
       recentlyRemoved[item.id] = payload; // this works - stores old state of item
-      delete database[payload.id];
 
       setTimeout(() => {
         if (recentlyRemoved[item.id]) {
           console.log('deleted', item.id);
-
+          delete database[payload.id];
           delete recentlyRemoved[item.id];
         }
       }, 1000);
@@ -100,6 +94,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     var currentData = database[payload.id];
     if (!currentData) return true;
 
+    database[payload.id] = payload;
     response = processChange(currentData, payload);
   }
 
@@ -112,9 +107,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // reload content script when URL changes
 chrome.tabs.onUpdated.addListener(
   function (tabId, changeInfo, tab) {
-    console.log(tabId, changeInfo);
-    // read changeInfo data and do something with it
-    // like send the new url to contentscripts.js
     if (changeInfo.url) {
       chrome.tabs.sendMessage(tabId, {
         type: 'urlChanged',

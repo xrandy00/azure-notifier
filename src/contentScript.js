@@ -102,7 +102,6 @@ function processNode(node, type) {
     assignedPerson: assignedPerson
   }
 
-  console.log('sending message', type, workItem);
   chrome.runtime.sendMessage(
     {
       type: type,
@@ -157,48 +156,50 @@ async function playAlert() {
   var song = pickAlert();
   var audio = new Audio(chrome.runtime.getURL(song));
   var volume = (await fetchAlertVolume());
+  console.log(volume);
   if (volume == 0) return;
   audio.volume = volume / 100;
   audio.play();
 }
 
-function fetchCheerVolume() {
+async function fetchCheerVolume() {
   try {
-    return readLocalStorage("cheerVolume") ?? 30;
+    return await (readLocalStorage("cheerVolume")) ?? 30;
   } catch {
     return 30;
   }
 }
 
-function fetchAlertVolume() {
+async function fetchAlertVolume() {
   try {
-    return readLocalStorage("alertVolume") ?? 30;
+    return await (readLocalStorage("alertVolume")) ?? 30;
   } catch {
     return 30;
   }
 }
 
-function fetchBalloonsEnabled() {
+async function fetchBalloonsEnabled() {
   try {
-    return readLocalStorage("balloons") ?? true;
+    return await (readLocalStorage("balloons")) ?? true;
   } catch {
     return true;
   }
 }
 
-function fetchCollapsiblesEnabled() {
+async function fetchCollapsiblesEnabled() {
   try {
-    return readLocalStorage("collapsibles") ?? true;
+    return await(readLocalStorage("collapsibles")) ?? true;
   } catch {
     return true;
   }
 }
 
 const readLocalStorage = async (key) => {
+  console.log('fetching');
   return new Promise((resolve, reject) => {
     chrome.storage.local.get([key], function (result) {
       if (result[key] === undefined) {
-        reject(null);
+        resolve(null);
       } else {
         resolve(result[key]);
       }
@@ -225,14 +226,11 @@ function notifyChange(id, type, property, from, to, song) {
 
   var text = `${type} ${id}, ${property} changed from "${from}" to "${to}"`;
   chrome.storage.local.get("data", function (rootObject) {
-    console.log(rootObject);
-
     if (!rootObject?.data) {
       rootObject.data = [];
     }
 
     rootObject.data.push(text);
-    console.log(rootObject.data);
 
     chrome.storage.local.set({ "data": rootObject.data }, function () { });
   });
@@ -259,8 +257,6 @@ function onIconClick(id, index) {
 }
 
 function enforceCollapsed(index) {
-  console.log(index);
-
   var header = document.querySelectorAll(`div.cell.inprogress`)[index];
 
   // collapse
@@ -316,7 +312,6 @@ function enforceCollapsed(index) {
 }
 
 function enforceExpanded(index) {
-  console.log(index);
   var header = document.querySelectorAll(`div.cell.inprogress`)[index];
 
   // expand
@@ -392,13 +387,11 @@ async function addCollapseButtons() {
       for (let i = 0; i < icons.length; i++) {
         const icon = icons[i];
         icon.addEventListener('click', function (event) {
-          console.log('icon click', event);
           for (let i = 0; i < addedIcons.length; i++) {
             const iconData = addedIcons[i];
 
             var iconElement = document.getElementById(iconData[0]).querySelector("i");
 
-            console.log(iconElement.classList);
             if (iconElement.classList.contains('bowtie-chevron-right')) {
               enforceCollapsed(iconData[1]);
             } else {
@@ -452,7 +445,6 @@ function listenToUrlChange() {
       if (request.type == 'urlChanged') {
         if (loadInProgress) return true;
         loadInProgress = true;
-        console.log('changing url');
         setTimeout(() => {
           addCollapseButtons();
           loadInProgress = false;
