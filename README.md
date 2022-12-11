@@ -1,11 +1,13 @@
 # <img src="public/icons/icon_48.png" width="45" align="left">&nbsp;&nbsp;Azure Notifier
 
-My Chrome Extension
+Azure Notifier
 
 ## Features
 
-- Feature 1
-- Feature 2
+- Add Collapse/Expand icons to Azure DevOps Boards columns
+- Track changes on Boards via live updates and display them in Changelog
+- Sound notifications when items change columns
+- Balloon animation and audio cheer for celebration when item reaches its final state
 
 ## Install
 
