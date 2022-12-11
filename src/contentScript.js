@@ -187,7 +187,7 @@ async function fetchBalloonsEnabled() {
 
 async function fetchCollapsiblesEnabled() {
   try {
-    return await(readLocalStorage("collapsibles")) ?? true;
+    return await (readLocalStorage("collapsibles")) ?? true;
   } catch {
     return true;
   }
@@ -356,6 +356,8 @@ async function addCollapseButtons() {
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
 
+      if (document.getElementById(`azure-notifier-column-collapse-icon-${i}`) != null) return;
+
       const collapseNode = htmlToElement(`
       <a id="azure-notifier-column-collapse-icon-${i}">
         <i class="bowtie-icon bowtie-chevron-left" style="font-size: 20px"></i>
@@ -364,7 +366,6 @@ async function addCollapseButtons() {
 
       var targetNode = node.children[1]?.children[0]?.children[0];
       if (!targetNode) return;
-
       targetNode.insertAdjacentElement('beforebegin', collapseNode);
       var element = document.getElementById(`azure-notifier-column-collapse-icon-${i}`);
 
